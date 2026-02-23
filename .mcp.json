@@ -6,6 +6,12 @@
         "playwright",
         "run-test-mcp-server"
       ]
+    },
+    "playwright-browser": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest"
+      ]
     }
   }
 }
