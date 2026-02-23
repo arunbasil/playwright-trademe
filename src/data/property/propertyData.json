@@ -1,0 +1,19 @@
+{
+    "common": {
+        "region": "Auckland",
+        "district": "Rodney",
+        "suburb": "Millwater",
+        "propertyType": "House",
+        "maxPrice": "$1.5M"
+    },
+    "bedroomOptions": [
+        "Any",
+        "Studio +",
+        "1 +",
+        "2 +",
+        "3 +",
+        "4 +",
+        "5 +",
+        "6 +"
+    ]
+}

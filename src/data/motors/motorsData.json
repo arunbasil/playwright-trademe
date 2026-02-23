@@ -1,0 +1,12 @@
+{
+    "common": {
+        "searchType": "New & used",
+        "vehicleType": "All cars",
+        "make": "Any make",
+        "location": "Auckland",
+        "yearFrom": "2020",
+        "priceMax": "$50k",
+        "bodyStyle": "RV/SUV",
+        "fuel": "Diesel"
+    }
+}
