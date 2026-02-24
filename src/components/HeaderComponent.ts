@@ -5,7 +5,7 @@ import { type Page } from '@playwright/test';
  * Covers the top nav bar: category tabs and auth action links.
  */
 export class HeaderComponent {
-    constructor(private readonly page: Page) {}
+    constructor(private readonly page: Page) { }
 
     async clickMarketplaceTab() {
         await this.page.getByRole('link', { name: 'Marketplace', exact: true }).first().click();
@@ -28,10 +28,10 @@ export class HeaderComponent {
     }
 
     async clickSignUp() {
-        await this.page.getByRole('link', { name: 'Sign up' }).click();
+        await this.page.getByLabel('navigation bar').getByRole('link', { name: 'Sign up' }).click();
     }
 
     async clickLogIn() {
-        await this.page.getByRole('link', { name: 'Log in' }).click();
+        await this.page.getByLabel('navigation bar').getByRole('link', { name: 'Log in' }).click();
     }
 }
