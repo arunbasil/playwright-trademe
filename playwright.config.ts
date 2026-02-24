@@ -9,7 +9,20 @@ export default defineConfig({
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
     workers: process.env.CI ? 1 : undefined,
-    reporter: [['html'], ['list']],
+    reporter: [
+        ['html', { open: 'never' }],
+        ['list'],
+        ['allure-playwright', {
+            detail: true,
+            outputFolder: 'allure-results',
+            suiteTitle: true,
+            environmentInfo: {
+                framework: 'Playwright',
+                language:  'TypeScript',
+                base_url:  process.env.BASE_URL ?? 'https://www.trademe.co.nz',
+            },
+        }],
+    ],
     use: {
         baseURL: process.env.BASE_URL ?? 'https://www.trademe.co.nz',
         trace: 'on-first-retry',

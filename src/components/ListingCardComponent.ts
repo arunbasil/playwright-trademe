@@ -5,7 +5,7 @@ import { type Locator, type Page } from '@playwright/test';
  * Encapsulates all interactions with the listing card grid/list.
  */
 export class ListingCardComponent {
-    constructor(private readonly page: Page) {}
+    constructor(private readonly page: Page) { }
 
     private get cards(): Locator {
         return this.page.locator('a[href*="/listing/"]');
@@ -26,11 +26,14 @@ export class ListingCardComponent {
         }
     }
 
-    /** Scroll to and click the last listing card on the current page. */
+    /**
+     * Click the last listing card on the current page.
+     * Note: Do NOT call scrollIntoViewIfNeeded() before click() —
+     * Playwright's click() scrolls automatically, and the extra call
+     * creates a window for stale DOM references in Angular SPAs.
+     */
     async clickLast() {
-        const last = this.cards.last();
-        await last.waitFor({ state: 'visible', timeout: 10_000 });
-        await last.scrollIntoViewIfNeeded();
-        await last.click();
+        await this.cards.first().waitFor({ state: 'visible', timeout: 10_000 });
+        await this.cards.last().click();
     }
 }
