@@ -28,6 +28,7 @@
 
 ## Angular SPA Gotchas
 - **Never use `networkidle`**: TradeMe keeps persistent connections. Use `domcontentloaded` or element waits instead.
+- **Avoid `scrollIntoViewIfNeeded()` before `click()`**: Playwright's `click()` auto-scrolls. The extra call creates a window for stale DOM references because Angular re-renders elements between the two calls.
 - **Overlay dismissal**: Use `page.keyboard.press('Escape')` after interacting with checkbox dropdowns (body style, fuel type, suburb).
 - **Force clicks**: Some elements are blocked by Angular overlays — use `{ force: true }` only as last resort.
 
