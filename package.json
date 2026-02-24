@@ -13,7 +13,11 @@
     "test:regression": "npx playwright test --grep @regression",
     "test:home": "npx playwright test --grep @home",
     "test:motors": "npx playwright test --grep @motors",
-    "test:property": "npx playwright test --grep @property"
+    "test:property":  "npx playwright test --grep @property",
+    "allure:generate": "allure generate allure-results --clean -o allure-report",
+    "allure:open":     "allure open allure-report",
+    "allure:report":   "npm run allure:generate && npm run allure:open",
+    "test:allure":     "npx playwright test && npm run allure:generate"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +26,8 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@types/node": "^25.3.0",
+    "allure-commandline": "^2.36.0",
+    "allure-playwright": "^3.4.5",
     "dotenv": "^17.3.1"
   }
 }

@@ -64,6 +64,11 @@ Prompt templates live in `.claude/prompts/` for: planning, generating, healing, 
 - If a locator keeps getting healed, **refactor it** instead
 - Regenerate agent definitions after Playwright updates: `npx playwright init-agents --loop=claude --prompts`
 
+## Local Prerequisites
+- **Java 17+** required to run `allure:generate` / `allure:open` (used by `allure-commandline`)
+  - macOS: `brew install openjdk@21` (or any version ≥ 17)
+  - Verify: `java -version`
+
 ## Commands
 - Test all:       `npx playwright test`
 - Test category:  `npx playwright test src/tests/motors/`
@@ -72,6 +77,9 @@ Prompt templates live in `.claude/prompts/` for: planning, generating, healing, 
 - UI Mode:        `npx playwright test --ui`
 - Show report:    `npx playwright show-report`
 - Init agents:    `npx playwright init-agents --loop=claude --prompts`
+- Allure generate: `npm run allure:generate`
+- Allure open:     `npm run allure:open`
+- Test + allure:   `npm run test:allure`
 
 ## Skills Reference
 - Consult `.skills/playwright-skill/` for Playwright best practices before debugging issues.

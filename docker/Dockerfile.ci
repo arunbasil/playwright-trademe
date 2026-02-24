@@ -1,0 +1,19 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# CI Agent Image — Playwright + Java
+#
+# Base:  Official Microsoft Playwright image (Node.js + Chromium + system deps)
+# Extra: Java (required by allure-commandline to generate Allure HTML reports)
+#
+# Usage in Jenkinsfile:
+#   agent { dockerfile { filename 'docker/Dockerfile.ci'; args '--ipc=host --shm-size=2g' } }
+#
+# Bump the image tag in lock-step with @playwright/test in package.json.
+# ─────────────────────────────────────────────────────────────────────────────
+FROM mcr.microsoft.com/playwright:v1.48.0-noble
+
+# Install Java Runtime (headless) for allure-commandline
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends default-jre-headless && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
