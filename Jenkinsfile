@@ -2,10 +2,35 @@
 // Jenkins Declarative Pipeline — TradeMe Playwright Tests + Allure Reporting
 //
 // Required plugins (Manage Jenkins → Plugins):
-//   • docker-workflow   → dockerfile agent support
-//   • copyartifact      → Allure trend history between builds
-//   • htmlpublisher     → Publish Allure HTML report in build sidebar
-//   • ws-cleanup        → cleanWs() in post block
+//   • docker-workflow        → dockerfile agent support
+//   • copyartifact           → Allure trend history between builds
+//   • htmlpublisher          → Publish Allure HTML report in build sidebar
+//   • ws-cleanup             → cleanWs() in post block
+//   • ansicolor              → ANSI colour in npm/playwright console output
+//   • configuration-as-code  → JCasC (docker/jenkins.yaml) for cloud migration
+//
+// ── AWS Migration Note ────────────────────────────────────────────────────────
+// To move to EKS, replace the agent block below with:
+//
+//   agent {
+//     kubernetes {
+//       yaml '''
+//         apiVersion: v1
+//         kind: Pod
+//         spec:
+//           containers:
+//           - name: playwright
+//             image: <ECR_URI>/playwright-trademe-ci:1.58.2
+//             command: ["sleep", "infinity"]
+//             resources:
+//               requests: { memory: "2Gi", cpu: "1" }
+//               limits:   { memory: "4Gi" }
+//       '''
+//       defaultContainer 'playwright'
+//     }
+//   }
+//
+// All 5 stages, parameters, environment vars, and post block are unchanged.
 // ─────────────────────────────────────────────────────────────────────────────
 pipeline {
 
@@ -19,16 +44,33 @@ pipeline {
         }
     }
 
+    // ── Runtime Parameters ───────────────────────────────────────────────────
+    // Select test scope at build time via "Build with Parameters".
+    // Default is 'sanity' for fast feedback on every commit.
+    parameters {
+        choice(
+            name:        'TEST_SCOPE',
+            choices:     ['sanity', 'regression', 'motors', 'property', 'home', 'all'],
+            description: 'Which test suite to run. Maps to npm test:* scripts or full suite.'
+        )
+        booleanParam(
+            name:         'SKIP_HISTORY',
+            defaultValue: false,
+            description:  'Skip restoring Allure history (useful when debugging a fresh run).'
+        )
+    }
+
     environment {
         BASE_URL = 'https://www.trademe.co.nz'
         CI       = 'true'
     }
 
     options {
+        ansiColor('xterm')              // Renders ANSI colour codes from npm/playwright output
         timestamps()
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '30', artifactNumToKeepStr: '30'))
-        timeout(time: 30, unit: 'MINUTES')
+        timeout(time: 45, unit: 'MINUTES')  // Regression + retries:2 can exceed 30 min
     }
 
     stages {
@@ -47,6 +89,9 @@ pipeline {
         // Copies allure-history/ from the last successful build so Allure can
         // render trend charts even though the Docker workspace is ephemeral.
         stage('Restore Allure History') {
+            when {
+                not { expression { return params.SKIP_HISTORY } }
+            }
             steps {
                 script {
                     try {
@@ -75,12 +120,33 @@ pipeline {
         }
 
         // ── 3. Run Tests ─────────────────────────────────────────────────────
-        // || true prevents the pipeline from aborting before report generation
-        // when tests fail. The real pass/fail is reflected in the Allure report
-        // and the post block sets build status accordingly.
+        // Exit code semantics:
+        //   0  → all tests passed           → build stays GREEN
+        //   1  → some tests failed          → build marked UNSTABLE (reports still run)
+        //   2+ → infrastructure/config error → build marked FAILURE (pipeline aborts)
         stage('Run Tests') {
             steps {
-                sh 'npx playwright test || true'
+                script {
+                    def scopeMap = [
+                        sanity:     'npm run test:sanity',
+                        regression: 'npm run test:regression',
+                        motors:     'npm run test:motors',
+                        property:   'npm run test:property',
+                        home:       'npm run test:home',
+                        all:        'npx playwright test'
+                    ]
+                    def cmd = scopeMap[params.TEST_SCOPE] ?: 'npx playwright test'
+                    echo "Running: ${cmd}"
+
+                    def exitCode = sh(script: cmd, returnStatus: true)
+                    if (exitCode == 1) {
+                        currentBuild.result = 'UNSTABLE'
+                        echo 'Tests completed with failures — build marked UNSTABLE.'
+                    } else if (exitCode != 0) {
+                        currentBuild.result = 'FAILURE'
+                        error("Test runner exited with unexpected code: ${exitCode}")
+                    }
+                }
             }
         }
 
@@ -89,10 +155,7 @@ pipeline {
             steps {
                 sh 'npx allure generate allure-results --clean -o allure-report'
                 // Snapshot history so the next build's Restore stage can use it
-                sh '''
-                    mkdir -p allure-history
-                    cp -r allure-report/history/. allure-history/
-                '''
+                sh 'mkdir -p allure-history && cp -r allure-report/history/. allure-history/'
             }
         }
 
@@ -114,7 +177,7 @@ pipeline {
                     reportDir:             'allure-report',
                     reportFiles:           'index.html',
                     reportName:            'Allure Report',
-                    reportTitles:          "Build ${env.BUILD_NUMBER} — Allure"
+                    reportTitles:          "Build ${env.BUILD_NUMBER} — ${params.TEST_SCOPE}"
                 ])
             }
         }
@@ -122,13 +185,16 @@ pipeline {
 
     post {
         always {
-            echo "Build ${env.BUILD_NUMBER} finished — ${currentBuild.currentResult}"
+            echo "Build ${env.BUILD_NUMBER} (scope: ${params.TEST_SCOPE}) finished — ${currentBuild.currentResult}"
         }
-        failure {
+        unstable {
             echo 'One or more tests failed. Open the Allure Report for step-level details and failure screenshots.'
         }
+        failure {
+            echo 'Pipeline infrastructure error. Check stage logs above.'
+        }
         cleanup {
-            // Clean workspace on success/abort; preserve on failure for ad-hoc debugging.
+            // Clean workspace on success/abort; preserve on failure/unstable for ad-hoc debugging.
             // Artifacts are already archived so no work is lost either way.
             cleanWs(
                 cleanWhenSuccess:  true,
