@@ -1,0 +1,75 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Jenkins Configuration as Code (JCasC)
+# Plugin: configuration-as-code
+#
+# Apply via: Manage Jenkins → Configuration as Code → Reload Existing Configuration
+#
+# To load automatically at container startup, add to your docker run command:
+#   -e CASC_JENKINS_CONFIG=/var/jenkins_home/casc/jenkins.yaml
+#   -v /path/to/docker/jenkins.yaml:/var/jenkins_home/casc/jenkins.yaml:ro
+#
+# ── AWS Migration ─────────────────────────────────────────────────────────────
+# On EKS: mount this file via a ConfigMap or load from S3.
+# Set CASC_JENKINS_CONFIG in the Jenkins pod's env. No UI reconfiguration needed.
+# Only change needed: update unclassified.location.url to your ALB/EC2 DNS.
+# ─────────────────────────────────────────────────────────────────────────────
+jenkins:
+  systemMessage: "TradeMe Playwright CI — managed by JCasC (docker/jenkins.yaml)"
+  numExecutors: 2
+  mode: NORMAL
+  scmCheckoutRetryCount: 1
+  slaveAgentPort: 50000
+  agentProtocols:
+    - "JNLP4-connect"
+
+  # ── Security ──────────────────────────────────────────────────────────────
+  # Passwords injected via environment variables — never hardcoded here.
+  # Set JENKINS_ADMIN_PASSWORD in the docker run command or a .env file.
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+# ── Credentials ───────────────────────────────────────────────────────────────
+# Inject GITHUB_USERNAME and GITHUB_PAT as environment variables.
+# These are referenced by the Pipeline job's SCM config (credentials id: github-pat).
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: GLOBAL
+              id: "github-pat"
+              description: "GitHub PAT — read access for SCM polling"
+              username: "${GITHUB_USERNAME}"
+              password: "${GITHUB_PAT}"
+
+# ── Misc Settings ─────────────────────────────────────────────────────────────
+unclassified:
+  location:
+    # !! Update this URL when deploying to AWS (EC2 public DNS or ALB) !!
+    # Webhooks and build badges use this value.
+    url: "http://localhost:8080/"
+    adminAddress: "admin@example.com"
+
+  githubPluginConfig:
+    configs:
+      - name: "GitHub"
+        apiUrl: "https://api.github.com"
+        credentialsId: "github-pat"
+        manageHooks: false   # false = no webhook management (polling-only setup)
+
+  timestamper:
+    allPipelines: true
+
+tool:
+  git:
+    installations:
+      - name: Default
+        home: "git"
