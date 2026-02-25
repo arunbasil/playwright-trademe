@@ -81,7 +81,9 @@ pipeline {
                 sh 'npm ci'
                 // Browsers are baked into the Docker image; re-install only ensures
                 // the version matches package.json if the image is stale.
-                sh 'npx playwright install chromium --with-deps'
+                // --with-deps is not needed: the Microsoft Playwright base image
+                // already includes all system dependencies for Chromium.
+                sh 'npx playwright install chromium'
             }
         }
 
